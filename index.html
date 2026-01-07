@@ -3,315 +3,449 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Never Give Up - Arquitectura del Hábito</title>
+    <title>Never Give Up - Time Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .glass-nav {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .active-tab {
-            background-color: #4f46e5;
-            color: white;
-            transform: scale(1.1);
-            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);
-        }
-        input:focus, textarea:focus {
-            outline: none;
-            ring: 2px;
-            ring-color: #4f46e5;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .active-tab { background-color: #4f46e5; color: white; transform: scale(1.1); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); }
+        
+        /* Pomodoro Animations */
+        .timer-svg { transform: rotate(-90deg); }
+        .timer-circle-bg { fill: none; stroke: rgba(255, 255, 255, 0.05); stroke-width: 6; }
+        .timer-circle-prog { fill: none; stroke: #6366f1; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.5s linear; }
+        .timer-circle-prog.rest { stroke: #10b981; }
+
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; overflow-x: auto; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Drag scroll for calendar */
+        #calendar-container { cursor: grab; user-select: none; }
+        #calendar-container:active { cursor: grabbing; }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .tab-content { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .mode-btn.active { background-color: white; color: #1e293b; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 pb-24 min-h-screen">
+<body class="bg-slate-50 text-slate-900 pb-28 min-h-screen">
 
-    <!-- Header -->
     <header class="sticky top-0 bg-white/80 backdrop-blur-lg border-b border-slate-100 px-6 py-4 z-50 flex items-center justify-between">
         <div class="flex items-center gap-2">
             <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
             </div>
-            <h1 class="font-black text-lg tracking-tight uppercase">Never Give Up</h1>
+            <h1 class="font-black text-lg tracking-tight uppercase text-indigo-900">Never Give Up</h1>
         </div>
-        <div class="flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-full text-indigo-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
-            <span id="progress-percent" class="text-xs font-black">0%</span>
-        </div>
+        <div id="progress-percent" class="bg-indigo-50 px-3 py-1 rounded-full text-indigo-600 border border-indigo-100 text-xs font-black">0%</div>
     </header>
 
     <main class="px-5 pt-6 max-w-md mx-auto space-y-6">
         
-        <!-- Tab: Hoy (Dashboard) -->
-        <section id="tab-dashboard" class="tab-content animate-in">
-            <!-- Timer -->
-            <div class="bg-slate-900 rounded-[2.5rem] p-6 mb-6 text-white text-center shadow-xl">
-                <p class="text-[10px] font-bold opacity-50 uppercase tracking-widest mb-1 text-center">Concentración Total</p>
-                <h2 id="timer-display" class="text-5xl font-mono font-black mb-4">00:00</h2>
-                <div class="flex gap-2 justify-center">
-                    <button id="timer-toggle" class="px-6 py-3 rounded-2xl font-black text-xs flex items-center gap-2 bg-indigo-500 hover:bg-indigo-400 transition-colors">
-                        INICIAR
+        <!-- Dashboard Tab -->
+        <section id="tab-dashboard" class="tab-content">
+            <div class="bg-slate-200 p-1 rounded-2xl flex mb-6">
+                <button onclick="switchMode('pomodoro')" id="btn-pomo" class="mode-btn active flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">Modo Pomodoro</button>
+                <button onclick="switchMode('chrono')" id="btn-chrono" class="mode-btn flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-slate-500">Cronómetro Libre</button>
+            </div>
+
+            <div class="bg-slate-900 rounded-[3rem] p-8 mb-6 text-white text-center shadow-2xl relative overflow-hidden">
+                <div id="status-badge" class="inline-block px-4 py-1 rounded-full bg-white/10 border border-white/5 mb-6">
+                    <span id="timer-status" class="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-400">Pomodoro: Enfoque</span>
+                </div>
+
+                <div class="relative flex justify-center items-center mb-8">
+                    <svg class="timer-svg" width="240" height="240">
+                        <circle class="timer-circle-bg" cx="120" cy="120" r="110"></circle>
+                        <circle id="timer-progress" class="timer-circle-prog" cx="120" cy="120" r="110"></circle>
+                    </svg>
+                    <div class="absolute flex flex-col items-center">
+                        <h2 id="main-display" class="text-5xl font-mono font-black tracking-tighter">00:25:00</h2>
+                        <span id="milli-display" class="hidden text-indigo-400 font-mono text-sm">.00</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 justify-center mb-10">
+                    <button id="main-toggle" class="px-12 py-4 rounded-2xl font-black text-xs bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/30">INICIAR</button>
+                    <button id="main-reset" class="p-4 bg-white/10 rounded-2xl hover:bg-white/20 transition-colors">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     </button>
-                    <button id="timer-reset" class="p-3 bg-white/10 rounded-2xl hover:bg-white/20 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                    </button>
+                </div>
+
+                <div id="pomo-settings" class="space-y-6 pt-6 border-t border-white/5">
+                    <div>
+                        <p class="text-[9px] font-black opacity-30 uppercase mb-3 tracking-widest">Enfoque (H:M:S)</p>
+                        <div class="flex justify-center gap-2">
+                            <input type="number" id="h-work" value="0" min="0" class="w-12 bg-white/5 border border-white/10 rounded-lg p-2 text-center text-xs font-bold">
+                            <input type="number" id="m-work" value="25" min="0" max="59" class="w-12 bg-white/5 border border-white/10 rounded-lg p-2 text-center text-xs font-bold">
+                            <input type="number" id="s-work" value="0" min="0" max="59" class="w-12 bg-white/5 border border-white/10 rounded-lg p-2 text-center text-xs font-bold">
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black opacity-30 uppercase mb-3 tracking-widest text-emerald-400">Descanso (H:M:S)</p>
+                        <div class="flex justify-center gap-2">
+                            <input type="number" id="h-rest" value="0" min="0" class="w-12 bg-white/5 border border-white/10 rounded-lg p-2 text-center text-xs font-bold">
+                            <input type="number" id="m-rest" value="5" min="0" max="59" class="w-12 bg-white/5 border border-white/10 rounded-lg p-2 text-center text-xs font-bold">
+                            <input type="number" id="s-rest" value="0" min="0" max="59" class="w-12 bg-white/5 border border-white/10 rounded-lg p-2 text-center text-xs font-bold">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reflection Tab -->
+        <section id="tab-reflexion" class="tab-content hidden">
+            <!-- Draggable Calendar -->
+            <div class="mb-6 bg-white p-4 rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+                <div class="flex justify-between items-center mb-6 px-2">
+                    <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-full text-slate-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"/></svg></button>
+                    <h2 id="current-month-label" class="font-black text-sm text-indigo-900 uppercase tracking-widest">Enero 2024</h2>
+                    <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-full text-slate-400"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"/></svg></button>
+                </div>
+                <div id="calendar-container" class="hide-scrollbar gap-3 px-1 pb-4 flex overflow-x-auto active:cursor-grabbing">
+                    <!-- Days injected by JS -->
                 </div>
             </div>
 
-            <!-- Garrones -->
-            <h2 class="font-black text-xs text-slate-400 uppercase tracking-widest mb-4 ml-2">El Garrón del Día</h2>
-            <div class="flex gap-2 mb-6">
-                <input type="text" id="garron-input" placeholder="¿Qué tenés que atacar?" class="flex-1 bg-white rounded-2xl px-4 text-sm border-none shadow-sm focus:ring-2 focus:ring-indigo-500">
-                <button id="add-garron" class="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg shadow-indigo-100 transition-transform active:scale-90">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                </button>
+            <!-- Day Summary -->
+            <div id="day-summary" class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm mb-6">
+                <h3 class="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-4">Resumen de Actividad</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-indigo-50 p-3 rounded-2xl text-center">
+                        <span id="sum-pomo" class="block font-black text-indigo-600 text-lg">0</span>
+                        <span class="text-[8px] font-bold text-indigo-400 uppercase">Pomos</span>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-2xl text-center">
+                        <span id="sum-chrono" class="block font-black text-emerald-600 text-lg">0m</span>
+                        <span class="text-[8px] font-bold text-emerald-400 uppercase">Enfoque</span>
+                    </div>
+                    <div class="bg-amber-50 p-3 rounded-2xl text-center">
+                        <span id="sum-tasks" class="block font-black text-amber-600 text-lg">0</span>
+                        <span class="text-[8px] font-bold text-amber-400 uppercase">Logros</span>
+                    </div>
+                </div>
             </div>
-            <div id="garrones-list" class="space-y-3"></div>
+
+            <div class="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative shadow-xl shadow-indigo-100">
+                <h2 class="text-xl font-black mb-1">Tu Reflexión</h2>
+                <textarea id="reflection-input" placeholder="¿Cómo te sentiste hoy?..." class="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm mt-4 h-24 outline-none focus:bg-white/20 placeholder:text-white/40"></textarea>
+                <button id="save-reflection" class="w-full bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs mt-4 uppercase tracking-widest">Guardar Registro</button>
+            </div>
+
+            <div class="mt-8 px-2">
+                <h2 class="font-black text-xs text-slate-400 uppercase tracking-widest mb-4">Historial de <span id="selected-date-label" class="text-indigo-600 underline"></span></h2>
+                <div id="entries-list" class="space-y-4"></div>
+            </div>
         </section>
 
-        <!-- Tab: Clases -->
-        <section id="tab-clases" class="tab-content hidden animate-in">
+        <!-- Classes Tab -->
+        <section id="tab-clases" class="tab-content hidden">
+            <header class="mb-6 px-2">
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">10 Clases Maestras</h2>
+                <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Módulos de Transformación</p>
+            </header>
             <div id="clases-list" class="space-y-4"></div>
         </section>
 
-        <!-- Tab: Bitácora -->
-        <section id="tab-reflexion" class="tab-content hidden animate-in">
-            <div class="bg-indigo-600 rounded-[2.5rem] p-8 text-white mb-6 relative overflow-hidden shadow-lg">
-                <h2 class="text-2xl font-black mb-2">Bitácora Mental</h2>
-                <p class="text-xs opacity-80 mb-6 leading-relaxed">Bajá tus pensamientos a tierra. ¿Qué aprendiste hoy sobre tu coherencia?</p>
-                <textarea id="reflection-input" placeholder="Escribí tu reflexión del día..." class="w-full bg-white/10 border border-white/20 rounded-2xl p-4 text-sm placeholder:text-white/40 text-white outline-none focus:bg-white/20 mb-4 h-32 resize-none"></textarea>
-                <button id="save-reflection" class="w-full bg-white text-indigo-600 py-4 rounded-2xl font-black text-xs shadow-xl active:scale-95 transition-all">
-                    GUARDAR REFLEXIÓN
-                </button>
+        <!-- Config Tab -->
+        <section id="tab-config" class="tab-content hidden">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 text-center">
+                <h3 class="font-black text-slate-800 mb-4 uppercase text-xs">Ajustes del Sistema</h3>
+                <button id="reset-btn" class="w-full p-6 rounded-3xl bg-rose-50 text-rose-500 font-black text-xs uppercase tracking-widest border border-rose-100">Reiniciar Base de Datos</button>
             </div>
-            <div id="reflections-list" class="space-y-4 mb-10"></div>
         </section>
-
-        <!-- Tab: Meta -->
-        <section id="tab-config" class="tab-content hidden animate-in">
-            <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm mb-4">
-                <h3 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    Filosofía del Hábito
-                </h3>
-                <p class="text-xs text-slate-600 leading-relaxed italic">
-                    "La coherencia es hacer lo que dijiste que ibas a hacer, incluso cuando ya no tenés ganas".
-                </p>
-            </div>
-            <button id="reset-btn" class="w-full p-6 rounded-[2.5rem] bg-white border border-rose-100 text-rose-500 font-black text-xs uppercase shadow-sm">
-                Borrar todo el progreso
-            </button>
-        </section>
-
     </main>
 
-    <!-- Nav Inferior -->
-    <footer class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass-nav border border-slate-200 h-16 rounded-full shadow-2xl z-50 flex items-center justify-around px-2">
-        <button onclick="showTab('dashboard')" class="nav-btn flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all text-slate-300" data-tab="dashboard">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-        </button>
-        <button onclick="showTab('clases')" class="nav-btn flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all text-slate-300" data-tab="clases">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        </button>
-        <button onclick="showTab('reflexion')" class="nav-btn flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all text-slate-300" data-tab="reflexion">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </button>
-        <button onclick="showTab('config')" class="nav-btn flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all text-slate-300" data-tab="config">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-        </button>
+    <footer class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass-nav border border-white/50 h-16 rounded-full shadow-2xl z-50 flex items-center justify-around px-2">
+        <button onclick="showTab('dashboard')" class="nav-btn active-tab flex items-center justify-center w-12 h-12 rounded-full transition-all text-slate-400" data-tab="dashboard"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+        <button onclick="showTab('clases')" class="nav-btn flex items-center justify-center w-12 h-12 rounded-full transition-all text-slate-400" data-tab="clases"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></button>
+        <button onclick="showTab('reflexion')" class="nav-btn flex items-center justify-center w-12 h-12 rounded-full transition-all text-slate-400" data-tab="reflexion"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button onclick="showTab('config')" class="nav-btn flex items-center justify-center w-12 h-12 rounded-full transition-all text-slate-400" data-tab="config"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="2" y1="14" x2="6" y2="14"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="18" y1="16" x2="22" y2="16"/></svg></button>
     </footer>
 
     <script>
-        // --- Datos de Ejercicios ---
         const exercises = [
-            { id: 1, title: "Desdramatizar", class: "C1", concept: "Nada es tan grave.", task: "Reíte de una crítica por 1 minuto." },
-            { id: 2, title: "Generosidad Mental", class: "C2", concept: "No asumas mala fe.", task: "Atribuí una ofensa al cansancio del otro." },
-            { id: 3, title: "Cartas Listas", class: "C3", concept: "Preparación vs Improvisación.", task: "Escribí 3 respuestas para crisis." },
-            { id: 4, title: "Zoom Out", class: "C4", concept: "Curiosidad expansiva.", task: "Investigá algo ajeno a tu trabajo." },
-            { id: 5, title: "Filtro Anti-Hate", class: "C5", concept: "Protección de la receta.", task: "Descartá una crítica que no sume." },
-            { id: 6, title: "Energía Extra", class: "C6", concept: "El 'Para Qué' es motor.", task: "Definí tu propósito de hoy." },
-            { id: 7, title: "Higiene Digital", class: "C7", concept: "Higiene de referencias.", task: "Silenciá 5 cuentas tóxicas." },
-            { id: 8, title: "Silencio de Raíz", class: "C8", concept: "El secreto da fuerza.", task: "No cuentes tus planes por 72h." },
-            { id: 9, title: "Maestría x Volumen", class: "C9", concept: "Cantidad genera calidad.", task: "Hacé 10 borradores rápidos hoy." },
-            { id: 10, title: "Coherencia", class: "C10", concept: "Identidad sobre emoción.", task: "Hacé lo que dijiste que harías." }
+            { id: 1, title: "Desdramatizar", class: "Clase 01", task: "Reíte de una crítica por 1 minuto hoy." },
+            { id: 2, title: "Generosidad Mental", class: "Clase 02", task: "Ante una duda, asumí que el otro no tuvo mala fe." },
+            { id: 3, title: "Cartas Listas", class: "Clase 03", task: "Tené 3 respuestas preparadas para momentos de crisis." },
+            { id: 4, title: "Foco Radical", class: "Clase 04", task: "Eliminá todas las notificaciones por 2 horas." },
+            { id: 5, title: "Miedo Positivo", class: "Clase 05", task: "Hacé eso que te da miedo pero sabés que es bueno." },
+            { id: 6, title: "Lenguaje de Poder", class: "Clase 06", task: "Cambiá el 'tengo que' por el 'elijo hacer'." },
+            { id: 7, title: "Cero Quejas", class: "Clase 07", task: "Pasá 4 horas consecutivas sin quejarte de nada." },
+            { id: 8, title: "Visualización Eficaz", class: "Clase 08", task: "Dedicá 5 min a ver el resultado final de tu esfuerzo." },
+            { id: 9, title: "Descanso Estratégico", class: "Clase 09", task: "Desconectate totalmente 15 min después de un bloque duro." },
+            { id: 10, title: "Coherencia Total", class: "Clase 10", task: "Hacé exactamente lo que dijiste que harías, sin excusas." }
         ];
 
-        // --- Estado de la App ---
         let state = {
-            garrones: JSON.parse(localStorage.getItem('web_garrones')) || [],
+            mode: 'pomodoro',
+            timerRunning: false,
+            isWorking: true,
+            pomoTime: 25 * 60,
+            pomoTotal: 25 * 60,
+            chronoTime: 0,
+            chronoStart: null,
             completed: JSON.parse(localStorage.getItem('web_completed')) || [],
-            reflections: JSON.parse(localStorage.getItem('web_reflections')) || [],
-            timer: 0,
-            timerRunning: false
+            entries: JSON.parse(localStorage.getItem('web_entries')) || [],
+            activity: JSON.parse(localStorage.getItem('web_activity')) || {}, 
+            currentViewDate: new Date(),
+            selectedDate: new Date().toLocaleDateString('es-ES')
         };
 
         let timerInterval;
+        const mainDisplay = document.getElementById('main-display');
+        const milliDisplay = document.getElementById('milli-display');
+        const mainToggle = document.getElementById('main-toggle');
+        const progressCircle = document.getElementById('timer-progress');
+        const circumference = 2 * Math.PI * 110;
+        progressCircle.style.strokeDasharray = circumference;
 
-        // --- Navegación ---
+        function formatTime(totalSeconds) {
+            const h = Math.floor(totalSeconds / 3600);
+            const m = Math.floor((totalSeconds % 3600) / 60);
+            const s = totalSeconds % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function switchMode(newMode) {
+            if (state.timerRunning) {
+                if(!confirm("¿Detener el tiempo actual?")) return;
+                resetTimer();
+            }
+            state.mode = newMode;
+            document.getElementById('btn-pomo').classList.toggle('active', newMode === 'pomodoro');
+            document.getElementById('btn-chrono').classList.toggle('active', newMode === 'chrono');
+            document.getElementById('pomo-settings').classList.toggle('hidden', newMode !== 'pomodoro');
+            document.getElementById('milli-display').classList.toggle('hidden', newMode !== 'chrono');
+            
+            if(newMode === 'pomodoro') {
+                updatePomoDuration();
+                document.getElementById('timer-status').innerText = "Pomodoro: Enfoque";
+            } else {
+                mainDisplay.innerText = "00:00:00";
+                milliDisplay.innerText = ".00";
+                document.getElementById('timer-status').innerText = "Cronómetro Libre";
+                progressCircle.style.strokeDashoffset = circumference;
+            }
+        }
+
+        function updatePomoDuration() {
+            const h = parseInt(document.getElementById(state.isWorking ? 'h-work' : 'h-rest').value) || 0;
+            const m = parseInt(document.getElementById(state.isWorking ? 'm-work' : 'm-rest').value) || 0;
+            const s = parseInt(document.getElementById(state.isWorking ? 's-work' : 's-rest').value) || 0;
+            state.pomoTotal = (h * 3600) + (m * 60) + s;
+            state.pomoTime = state.pomoTotal;
+            mainDisplay.innerText = formatTime(state.pomoTime);
+            progressCircle.style.strokeDashoffset = 0;
+        }
+
+        function trackActivity(type, amount) {
+            const today = new Date().toLocaleDateString('es-ES');
+            if(!state.activity[today]) state.activity[today] = { pomos: 0, chronoSec: 0 };
+            
+            if(type === 'pomo') state.activity[today].pomos += amount;
+            if(type === 'chrono') state.activity[today].chronoSec += amount;
+            
+            localStorage.setItem('web_activity', JSON.stringify(state.activity));
+            renderDaySummary();
+        }
+
+        function startTimer() {
+            state.timerRunning = true;
+            mainToggle.innerText = "PAUSAR";
+            mainToggle.classList.replace('bg-indigo-600', 'bg-rose-500');
+
+            if (state.mode === 'pomodoro') {
+                timerInterval = setInterval(() => {
+                    if (state.pomoTime > 0) {
+                        state.pomoTime--;
+                        mainDisplay.innerText = formatTime(state.pomoTime);
+                        progressCircle.style.strokeDashoffset = circumference - (state.pomoTime / state.pomoTotal) * circumference;
+                    } else {
+                        if(state.isWorking) trackActivity('pomo', 1);
+                        playAlarm();
+                        state.isWorking = !state.isWorking;
+                        document.getElementById('timer-status').innerText = state.isWorking ? "Enfoque" : "Descanso";
+                        progressCircle.classList.toggle('rest', !state.isWorking);
+                        updatePomoDuration();
+                    }
+                }, 1000);
+            } else {
+                state.chronoStart = Date.now() - (state.chronoTime * 1000);
+                timerInterval = setInterval(() => {
+                    const diff = Date.now() - state.chronoStart;
+                    const oldSec = Math.floor(state.chronoTime);
+                    state.chronoTime = diff / 1000;
+                    const newSec = Math.floor(state.chronoTime);
+                    
+                    if(newSec > oldSec) trackActivity('chrono', 1);
+
+                    mainDisplay.innerText = formatTime(newSec);
+                    milliDisplay.innerText = "." + Math.floor((diff % 1000) / 10).toString().padStart(2, '0');
+                    progressCircle.style.strokeDashoffset = circumference - ((diff % 2000) / 2000 * circumference);
+                }, 50);
+            }
+        }
+
+        function pauseTimer() {
+            state.timerRunning = false;
+            clearInterval(timerInterval);
+            mainToggle.innerText = "REANUDAR";
+            mainToggle.classList.replace('bg-rose-500', 'bg-indigo-600');
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            mainToggle.innerText = "INICIAR";
+            if (state.mode === 'pomodoro') {
+                state.isWorking = true;
+                progressCircle.classList.remove('rest');
+                updatePomoDuration();
+            } else {
+                state.chronoTime = 0;
+                mainDisplay.innerText = "00:00:00";
+                milliDisplay.innerText = ".00";
+                progressCircle.style.strokeDashoffset = circumference;
+            }
+        }
+
+        function playAlarm() {
+            try {
+                const msg = new SpeechSynthesisUtterance(state.isWorking ? "Tiempo de descansar" : "A trabajar");
+                window.speechSynthesis.speak(msg);
+            } catch(e) {}
+        }
+
+        mainToggle.addEventListener('click', () => state.timerRunning ? pauseTimer() : startTimer());
+        document.getElementById('main-reset').addEventListener('click', resetTimer);
+
+        // --- Navigation ---
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active-tab', btn.dataset.tab === tabId));
+            if(tabId === 'reflexion') { renderCalendar(); renderDayEntries(); renderDaySummary(); }
+            if(tabId === 'clases') renderClases();
+        }
+
+        // --- Draggable Calendar Logic ---
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        const cal = document.getElementById('calendar-container');
+
+        cal.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - cal.offsetLeft; scrollLeft = cal.scrollLeft; });
+        cal.addEventListener('mouseleave', () => { isDown = false; });
+        cal.addEventListener('mouseup', () => { isDown = false; });
+        cal.addEventListener('mousemove', (e) => {
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - cal.offsetLeft;
+            const walk = (x - startX) * 2;
+            cal.scrollLeft = scrollLeft - walk;
+        });
+
+        function changeMonth(offset) { state.currentViewDate.setMonth(state.currentViewDate.getMonth() + offset); renderCalendar(); }
+
+        function renderCalendar() {
+            const container = document.getElementById('calendar-container');
+            const year = state.currentViewDate.getFullYear(), month = state.currentViewDate.getMonth();
+            document.getElementById('current-month-label').innerText = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(state.currentViewDate);
+            const last = new Date(year, month + 1, 0).getDate();
+            let html = '';
+            for(let i=1; i<=last; i++) {
+                const ds = new Date(year, month, i).toLocaleDateString('es-ES');
+                const isSel = state.selectedDate === ds;
+                const hasData = state.entries.some(e => e.date === ds) || state.activity[ds];
+                html += `<button onclick="selectDate('${ds}')" class="flex-shrink-0 w-14 h-16 rounded-2xl border flex flex-col items-center justify-center transition-all ${isSel ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-100'} ${hasData ? 'after:content-[\'•\'] after:text-[10px] after:mt-[-5px]' : ''}">
+                    <span class="text-[8px] uppercase font-bold opacity-60">${new Date(year, month, i).toLocaleDateString('es-ES', {weekday: 'short'})}</span>
+                    <span class="text-sm font-black">${i}</span>
+                </button>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function selectDate(d) { 
+            state.selectedDate = d; 
+            renderCalendar(); 
+            renderDayEntries(); 
+            renderDaySummary();
+            document.getElementById('selected-date-label').innerText = d === new Date().toLocaleDateString('es-ES') ? 'HOY' : d; 
+        }
+
+        function renderDaySummary() {
+            const dayData = state.activity[state.selectedDate] || { pomos: 0, chronoSec: 0 };
+            const completedCount = state.entries.filter(e => e.date === state.selectedDate && e.type === 'Logro').length;
             
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active-tab');
-                if(btn.dataset.tab === tabId) btn.classList.add('active-tab');
-            });
+            document.getElementById('sum-pomo').innerText = dayData.pomos;
+            document.getElementById('sum-chrono').innerText = Math.floor(dayData.chronoSec / 60) + 'm';
+            document.getElementById('sum-tasks').innerText = completedCount;
         }
 
-        // --- Temporizador ---
-        function formatTime(s) {
-            const m = Math.floor(s / 60);
-            const secs = s % 60;
-            return `${m.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        document.getElementById('timer-toggle').addEventListener('click', () => {
-            state.timerRunning = !state.timerRunning;
-            const btn = document.getElementById('timer-toggle');
-            if(state.timerRunning) {
-                btn.innerText = 'PAUSAR';
-                btn.classList.replace('bg-indigo-500', 'bg-rose-500');
-                timerInterval = setInterval(() => {
-                    state.timer++;
-                    document.getElementById('timer-display').innerText = formatTime(state.timer);
-                }, 1000);
-            } else {
-                btn.innerText = 'ENFOCAR';
-                btn.classList.replace('bg-rose-500', 'bg-indigo-500');
-                clearInterval(timerInterval);
-            }
-        });
-
-        document.getElementById('timer-reset').addEventListener('click', () => {
-            state.timer = 0;
-            document.getElementById('timer-display').innerText = "00:00";
-        });
-
-        // --- Garrones ---
-        function renderGarrones() {
-            const list = document.getElementById('garrones-list');
-            list.innerHTML = state.garrones.map(g => `
-                <div class="flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-slate-50">
-                    <div class="flex items-center gap-3">
-                        <button onclick="toggleGarron(${g.id})" class="p-1 rounded-lg ${g.done ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-300'}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        </button>
-                        <span class="text-sm font-medium ${g.done ? 'line-through text-slate-300' : 'text-slate-700'}">${g.text}</span>
-                    </div>
-                    <button onclick="deleteGarron(${g.id})" class="text-slate-200 hover:text-rose-400"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-                </div>
-            `).join('');
-            localStorage.setItem('web_garrones', JSON.stringify(state.garrones));
-        }
-
-        document.getElementById('add-garron').addEventListener('click', () => {
-            const input = document.getElementById('garron-input');
-            if(!input.value.trim()) return;
-            state.garrones.push({ id: Date.now(), text: input.value, done: false });
-            input.value = '';
-            renderGarrones();
-        });
-
-        function toggleGarron(id) {
-            state.garrones = state.garrones.map(g => g.id === id ? {...g, done: !g.done} : g);
-            renderGarrones();
-        }
-
-        function deleteGarron(id) {
-            state.garrones = state.garrones.filter(g => g.id !== id);
-            renderGarrones();
-        }
-
-        // --- Clases / Logros ---
         function renderClases() {
-            const list = document.getElementById('clases-list');
-            list.innerHTML = exercises.map(ex => `
-                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-slate-900 text-white rounded-2xl font-bold text-xs">${ex.class}</div>
-                            <h3 class="font-bold text-slate-800 text-base">${ex.title}</h3>
-                        </div>
+            document.getElementById('clases-list').innerHTML = exercises.map(ex => `
+                <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider">${ex.class}</span>
+                        ${state.completed.includes(ex.id) ? '<svg class="text-emerald-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
                     </div>
-                    <p class="text-xs text-slate-600 mb-2 leading-relaxed"><strong>Concepto:</strong> ${ex.concept}</p>
-                    <div class="p-3 bg-slate-50 rounded-xl mb-3 border border-dashed border-slate-200">
-                        <p class="text-[11px] text-slate-500 italic">"${ex.task}"</p>
-                    </div>
-                    <button onclick="toggleExercise(${ex.id})" class="w-full py-3 rounded-2xl text-[10px] font-black tracking-widest uppercase transition-all ${state.completed.includes(ex.id) ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-400'}">
-                        ${state.completed.includes(ex.id) ? 'LOGRADO' : 'MARCAR COMO LOGRADO'}
+                    <h3 class="font-black text-slate-900 mb-2">${ex.title}</h3>
+                    <p class="text-xs text-slate-500 mb-6 leading-relaxed">${ex.task}</p>
+                    <button onclick="toggleEx(${ex.id}, '${ex.title}')" class="w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${state.completed.includes(ex.id) ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-100 text-slate-400 hover:bg-indigo-600 hover:text-white'}">
+                        ${state.completed.includes(ex.id) ? 'COMPLETADO' : 'MARCAR LOGRADO'}
                     </button>
-                </div>
-            `).join('');
-            updateProgress();
+                </div>`).join('');
+            
+            const progress = Math.round((state.completed.length / exercises.length) * 100);
+            document.getElementById('progress-percent').innerText = progress + "%";
         }
 
-        function toggleExercise(id) {
+        function toggleEx(id, title) { 
+            const today = new Date().toLocaleDateString('es-ES');
             if(state.completed.includes(id)) {
-                state.completed = state.completed.filter(x => x !== id);
+                state.completed = state.completed.filter(x=>x!==id);
+                state.entries = state.entries.filter(e => !(e.type === 'Logro' && e.taskId === id));
             } else {
-                state.completed.push(id);
+                state.completed = [...state.completed, id];
+                state.entries.unshift({ id: Date.now(), type: 'Logro', text: `Logro: ${title}`, date: today, taskId: id });
             }
-            localStorage.setItem('web_completed', JSON.stringify(state.completed));
-            renderClases();
+            localStorage.setItem('web_completed', JSON.stringify(state.completed)); 
+            localStorage.setItem('web_entries', JSON.stringify(state.entries));
+            renderClases(); 
         }
 
-        function updateProgress() {
-            const percent = Math.round((state.completed.length / exercises.length) * 100);
-            document.getElementById('progress-percent').innerText = `${percent}%`;
+        function saveEntry(type, inputId) {
+            const input = document.getElementById(inputId), val = input.value.trim();
+            if(!val) return;
+            state.entries.unshift({ id: Date.now(), type, text: val, date: state.selectedDate });
+            input.value = ''; 
+            localStorage.setItem('web_entries', JSON.stringify(state.entries));
+            renderDayEntries(); 
+            renderCalendar();
         }
 
-        // --- Bitácora ---
-        function renderReflections() {
-            const list = document.getElementById('reflections-list');
-            list.innerHTML = state.reflections.map(r => `
-                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-                    <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">${r.date}</span>
-                    <p class="text-sm text-slate-700 leading-relaxed font-medium mt-1">${r.text}</p>
-                </div>
-            `).join('');
-            localStorage.setItem('web_reflections', JSON.stringify(state.reflections));
+        function renderDayEntries() {
+            const filtered = state.entries.filter(e => e.date === state.selectedDate);
+            document.getElementById('entries-list').innerHTML = filtered.length ? filtered.map(e => `
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 text-xs italic text-slate-600 flex justify-between items-start shadow-sm">
+                    <span class="leading-relaxed">"${e.text}"</span>
+                    ${e.type === 'Logro' ? '<span class="bg-amber-100 text-amber-600 px-2 py-0.5 rounded-lg text-[7px] font-black uppercase ml-2 flex-shrink-0">Meta</span>' : ''}
+                </div>`).join('') : '<p class="text-center text-slate-300 text-[10px] uppercase font-bold py-10 tracking-widest">Sin registros este día</p>';
         }
 
-        document.getElementById('save-reflection').addEventListener('click', () => {
-            const input = document.getElementById('reflection-input');
-            if(!input.value.trim()) return;
-            state.reflections.unshift({ 
-                id: Date.now(), 
-                text: input.value, 
-                date: new Date().toLocaleDateString() 
-            });
-            input.value = '';
-            renderReflections();
-        });
+        document.getElementById('save-reflection').addEventListener('click', () => saveEntry('Reflexión', 'reflection-input'));
+        document.getElementById('reset-btn').addEventListener('click', () => { if(confirm("¿Borrar todo el progreso y ajustes?")) { localStorage.clear(); location.reload(); } });
 
-        // --- Configuración ---
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            if(confirm("¿Seguro que querés borrar todo el progreso?")) {
-                localStorage.clear();
-                window.location.reload();
-            }
-        });
-
-        // Init
-        window.onload = () => {
-            showTab('dashboard');
-            renderGarrones();
-            renderClases();
-            renderReflections();
+        window.onload = () => { 
+            updatePomoDuration(); 
+            renderClases(); 
+            document.getElementById('selected-date-label').innerText = 'HOY'; 
         };
-
     </script>
-</body>
-</html>
+</body
+</html>>
